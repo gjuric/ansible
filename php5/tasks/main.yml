@@ -1,0 +1,40 @@
+---
+  - name: APT | Add DotDeb wheezy repository
+    apt_repository: repo='$item' state=present
+    with_items:
+      - deb http://packages.dotdeb.org wheezy-php55 all
+      - deb-src http://packages.dotdeb.org wheezy-php55 all
+    tags: dotdeb
+
+  - name: APT | Install dotdeb.org key
+    apt_key: 
+      url: http://www.dotdeb.org/dotdeb.gpg
+      state: present
+    tags: dotdeb
+
+  - name: APT | Run apt-get update
+    apt: update_cache=yes
+    tags: dotdeb
+
+  - name: PHP5 | Install $item
+    apt: pkg=$item state=installed
+    with_items:
+      - php5-cli
+      - php5-fpm
+      - php5-curl
+      - php5-gd
+      - php5-mysql
+      - php5-intl
+    tags: php5-fpm
+
+  - name: PHP5 | Delete default pool
+    file: path=/etc/php5/fpm/pool.d/www.conf state=absent
+    notify:
+      - restart php5-fpm
+    tags: php5-fpm
+
+  - name: PHP5 | Add php5-fpm pool
+    template: src=pool.conf.j2 dest=/etc/php5/fpm/pool.d/www.conf mode=0644
+    notify:
+      - restart php5-fpm
+    tags: php5-fpm

@@ -1,0 +1,45 @@
+---
+  - name: APT | Add official nginx repository
+    apt_repository:
+      repo: "$item"
+      state: present
+    with_items:
+      - deb http://nginx.org/packages/debian/ wheezy nginx
+      - deb-src http://nginx.org/packages/debian/ wheezy nginx
+    tags: nginx
+
+  - name: APT | Install nginx.org key
+    apt_key: 
+      url: http://nginx.org/keys/nginx_signing.key
+      state: present
+    tags: nginx
+
+  - name: APT | Run apt-get update
+    apt: update_cache=yes
+    tags: nginx
+
+  - name: APT | Install nginx
+    apt: pkg=nginx state=installed
+    tags: nginx
+
+  - name: Create the directories for site specific configurations
+    file: path=/etc/nginx/{{ item }} state=directory owner=root group=root mode=0755
+    with_items:
+      - "sites-available"
+      - "sites-enabled"
+
+  - name: Copy the nginx configuration file
+    template:
+      src: nginx.conf.j2
+      dest: /etc/nginx/nginx.conf
+    notify:
+     - restart nginx
+
+  - name: Check that our config is valid
+    command: /etc/init.d/nginx configtest
+    register: result
+    ignore_errors: True
+
+  - name: start the nginx service
+    service: name=nginx state=started enabled=yes
+    when: result|success
